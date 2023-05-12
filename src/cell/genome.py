@@ -13,6 +13,9 @@ class Gene:
     def random_init(self, genome_size):
         self.adjacent = np.random.randint(-genome_size, genome_size + 1, 6).clip(0)
 
+    def has_adjacent(self):
+        return True if np.sum(self.adjacent) != 0 else False
+
     def get_top(self):
         return self.adjacent[0]
 
@@ -62,7 +65,7 @@ class Genome:
         return genes
 
     def get_gene(self, id):
-        return self.genes[id]
+        return next((gene for gene in self.genes if gene.id == id), None)
 
     def get_genes(self):
         return self.genes
