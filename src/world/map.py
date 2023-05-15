@@ -1,7 +1,7 @@
 import numpy as np
+import copy
 
-GROUND = 0
-
+from src.configs.config import *
 
 class Map:
     def __init__(
@@ -82,6 +82,12 @@ class Map:
         repr += "\n"
         repr += f"Energy:\n{self.energy_map}"
         return repr
+    
+    def copy(self, deep=True):
+        if deep:
+            return copy.deepcopy(self)
+        else:
+            return copy.copy(self)
 
     def plot_voxels(self, ax):
         ax.voxels(self.voxels, facecolors="green", edgecolor="k")
