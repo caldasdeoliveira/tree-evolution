@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-
+from src.configs.config import *
 
 class Gene:
     def __init__(self, id, adjacent=None, genome_size=10):
@@ -33,7 +33,10 @@ class Gene:
 
     def get_back(self):
         return self.adjacent[5]
-
+    
+    def is_seed(self):
+        return True if self.id == SEEDCELL_GENE_NUMBER else False
+    
     def __str__(self) -> str:
         return f"{self.id}: {', '.join([str(x) for x in self.adjacent])}"
 
