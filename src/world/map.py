@@ -1,7 +1,15 @@
 import numpy as np
 import copy
+import logging
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 
 from src.configs.config import *
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
+
 
 class Map:
     def __init__(
@@ -17,10 +25,15 @@ class Map:
         self.voxels = np.zeros((width, height, depth), dtype=np.uint8)
         self.energy_map = np.zeros((width, height, depth), dtype=np.uint8)
 
+        self.color_map = {}
+
     def get_voxel(self, x, y, z):
         return self.voxels[x, y, z]
 
     def set_voxel(self, x, y, z, value):
+        if isinstance(value, str):
+            value = int(value.replace(".", ""))
+        logger.debug(f"Setting voxel {x}, {y}, {z} to {value}")
         self.voxels[x, y, z] = value
 
     def get_voxel_energy(self, x, y, z):
@@ -76,18 +89,40 @@ class Map:
                             energy_left = 0
 
     def __repr__(self) -> str:
-        repr = f"Map(width={self.width}, height={self.height}, depth={self.depth}, sun_value={self.sun_value}, block_decrease={self.block_decrease})"
+        repr = f"Map("
+        repr += f"width={self.width}, "
+        repr += f"height={self.height}, "
+        repr += f"depth={self.depth}, "
+        repr += f"sun_value={self.sun_value}, "
+        repr += f"block_decrease={self.block_decrease})"
         repr += "\n"
         repr += f"Voxels:\n{self.voxels}"
         repr += "\n"
         repr += f"Energy:\n{self.energy_map}"
         return repr
-    
+
     def copy(self, deep=True):
         if deep:
             return copy.deepcopy(self)
         else:
             return copy.copy(self)
 
-    def plot_voxels(self, ax):
-        ax.voxels(self.voxels, facecolors="green", edgecolor="k")
+    def plot_voxels(self):
+        voxelarray = self.voxels != 0
+
+        colors = np.empty(voxelarray.shape, dtype=object)
+        for i in np.unique(self.voxels):
+            if i == 0:
+                continue
+
+            if i not in self.color_map:
+                self.color_map[i] = np.random.choice(
+                    list(mcolors.CSS4_COLORS.values()), replace=False
+                )
+
+            colors[self.voxels == i] = self.color_map[i]
+
+        ax = plt.figure().add_subplot(projection="3d")
+        ax.voxels(voxelarray, facecolors=colors, edgecolor="k")
+
+        plt.show(block=True)

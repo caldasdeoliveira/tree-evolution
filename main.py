@@ -5,6 +5,10 @@ from src.cell.genome import Genome
 import numpy as np
 import random
 
+# %matplotlib notebook
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
 from src.configs.config import *
 import logging
 
@@ -23,8 +27,9 @@ for i in range(1, INITIAL_POPULATION_SIZE + 1):
     x = np.random.randint(0, WORLD_WIDTH)
     y = 0
     z = np.random.randint(0, WORLD_DEPTH)
+    id = f"{i:03}"
     cell = Cell(
-        tree_id=i,
+        tree_id=id,
         x=x,
         y=y,
         z=z,
@@ -39,7 +44,7 @@ for i in range(1, INITIAL_POPULATION_SIZE + 1):
     )
     population.append(
         Tree(
-            str(i),
+            id,
             [cell],
             cell.genome,
             initial_energy=INITIAL_ENERGY,
@@ -51,6 +56,7 @@ for i in range(1, INITIAL_POPULATION_SIZE + 1):
 logger.info("Starting experiment")
 world_history = [world.copy(deep=True)]
 historic_population = []
+world.plot_voxels()
 for t in range(EXPERIMENT_DURATION):
     logger.info(f"Day {t}")
     logger.info(f"Population size: {len(population)}")
@@ -63,16 +69,10 @@ for t in range(EXPERIMENT_DURATION):
             historic_population.append(tree)
             population.remove(tree)
             for seed_number, seed in enumerate(offspring):
-                population.append(
-                    Tree(
-                        f"{tree.id}.{seed_number}",
-                        [seed],
-                        seed.genome,
-                        initial_energy=seed.energy,
-                        growth_cost=GROWTH_COST,
-                    )
-                )
-
+                new_seed = seed.germinate(map=world, seed_number=seed_number)
+                if new_seed is not None:
+                    population.append(new_seed)
+    world.plot_voxels()
     world_history.append(world.copy(deep=True))
 
 

@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
+
 class Cell:
     def __init__(
         self,
@@ -20,7 +21,7 @@ class Cell:
         gene: int,
         energy_consumption=1,
     ):
-        self.tree_id = str(tree_id)
+        self.tree_id = tree_id
         self.x = x
         self.y = y
         self.z = z
@@ -33,8 +34,8 @@ class Cell:
 
     def is_seed(self):
         return False
-    
-    def new_cell(self, x, y, z,map, genome, gene):
+
+    def new_cell(self, x, y, z, map, genome, gene):
         if gene == SEEDCELL_GENE_NUMBER:
             return Seed(
                 tree_id=self.tree_id,
@@ -174,28 +175,46 @@ class Seed(Cell):
         self.grown = False
 
     def fall_to_ground(self, map):
-        if sum(map.voxels[self.x, self.y : -1, self.z]) == 0:
+        if self.grown == True:
+            logger.debug("Seed is already grown")
             map.set_voxel(self.x, self.y, self.z, 0)
-            map.set_voxel(self.x, 0, self.z, 1)
-            self.y = 0
 
-    def germinate(self):
+        if sum(map.voxels[self.x, 0 : self.y, self.z]) == 0:
+            map.set_voxel(self.x, self.y, self.z, 0)
+            map.set_voxel(self.x, 0, self.z, self.tree_id)
+            self.y = 0
+        else:
+            logger.debug("Seed cannot fall to ground")
+            map.set_voxel(self.x, self.y, self.z, 0)
+
+    def germinate(self, map, seed_number):
         if self.y != GROUND:
             logger.debug("Seed is not on the ground")
             return None
-        
+
         self.active = True
         self.energy_consumption = CELL_ENERGY_CONSUMPTION
+        self.grown = True
+
+        self.tree_id = f"{self.tree_id}.{seed_number:03}"
+        map.set_voxel(self.x, self.y, self.z, self.tree_id)
+
+        return Tree(
+            self.tree_id,
+            [self],
+            self.genome,
+            initial_energy=self.energy,
+            growth_cost=GROWTH_COST,
+        )
         ## TODO develop this idea further
 
-        
     def is_seed(self):
-        return self.grown == False
+        return not self.grown
 
 
 class Tree:
     def __init__(self, id, cells, genome, initial_energy=100, growth_cost=1):
-        self.id = str(id)
+        self.id = id
         self.cells = cells
         self.genome = genome
         self.energy = initial_energy
@@ -217,19 +236,20 @@ class Tree:
 
     def get_age(self):
         return self.age
-    
+
     def check_alive(self):
         if self.energy <= 0:
-            logger.info(f"Tree {self.id} died of starvation")
             return False
         return True
-    
+
     def update_age(self):
         self.age += 1
 
     def update_alive(self):
         self.alive = self.check_alive()
-    
+        if self.alive == False:
+            logger.info(f"Tree {self.id} has died")
+
     def get_seeds(self):
         return [cell for cell in self.cells if cell.is_seed()]
 
@@ -251,7 +271,10 @@ class Tree:
         logger.debug(f"Tree {self.id} has {self.energy} energy before comsumption")
         energy_consumption = 0
         for cell in self.cells:
-            energy_consumption += cell.energy_consumption * int(1+self.age*ENERGY_CONSUMPTION_INCREASE_RATE)
+            cell_energy_increase_ratio = int(
+                1 + self.age * ENERGY_CONSUMPTION_INCREASE_RATE
+            )
+            energy_consumption += cell.energy_consumption * cell_energy_increase_ratio
         logger.info(f"Tree {self.id} Energy consumed: {energy_consumption}")
 
         self.energy -= energy_consumption
@@ -292,4 +315,12 @@ class Tree:
         self.energy += energy_produced
 
     def __repr__(self) -> str:
-        return f"##### Tree {self.id} #####\nnumber of cells: {len(self.cells)}\ncells: {self.cells}\nGenome: {self.genome}\nEnergy: {self.energy}\nAlive: {self.alive}\nAge: {self.age}\n##########################\n"
+        repr = f"##### Tree {self.id} #####\n"
+        repr += f"number of cells: {len(self.cells)}\n"
+        repr += f"cells: {self.cells}\n"
+        repr += f"Genome: {self.genome}\n"
+        repr += f"Energy: {self.energy}\n"
+        repr += f"Alive: {self.alive}\n"
+        repr += f"Age: {self.age}\n"
+        repr += f"##########################\n"
+        return repr
